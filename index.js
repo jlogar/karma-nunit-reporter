@@ -3,15 +3,21 @@ var path = require('path');
 var fs = require('fs');
 var builder = require('xmlbuilder');
 
+
 var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, helper, formatError) {
+  var outputFile = path.resolve(config.basePath, config.nunitReporter.outputFile);
+  var suiteName = config.nunitReporter.suiteName || 'unit';
   var log = logger.create('reporter.nunit');
-  var outputFile = config.outputFile || 'nunit-results.xml';
-  var suiteName = config.suiteName || 'unit';
+  
   var xml;
   var testBrowsers;
   var allMessages = [];
   var pendingFileWritings = 0;
   var fileWritingFinished = function(){};
+  var xmlTestsTotal = 0;
+  var xmlTestsFailures = 0;
+  var xmlTestsErrors = 0;
+  var xmlTestsNotRun = 0;
 
   baseReporterDecorator(this);
 
@@ -38,7 +44,7 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
     var suite = testBrowsers[browser.id];
     var result = browser.lastResult;
 
-    suite.att('executed', true);
+    suite.att('executed', 'True');
     suite.att('result', result.failed ==! 0 ? 'Failure' : 'Success');
     suite.att('success', result.failed === 0 ? true : false);
     suite.att('failures', result.failed);
@@ -46,6 +52,9 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
 
     suite.ele('system-out').dat(allMessages.join() + '\n');
     suite.ele('system-err');
+	
+	xmlTestsTotal += result.total;
+	xmlTestsFailures += result.failed;
   };
 
   this.specSuccess = this.specSkipped = this.specFailure = function(browser, result) {
@@ -65,8 +74,9 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
       name: result.description,
       time: ((result.time || 0) / 1000),
       description: result.suite.join(' ').replace(/\./g, '_'),
-      executed: true,
-      result: result.skipped? 'Ignored': result.success? 'Success': 'Failure'
+      executed: 'True',
+      result: result.skipped? 'Ignored': result.success? 'Success': 'Failure',
+	  success: result.success? 'True': 'False'
     });
 
     if (!result.success) {
@@ -77,6 +87,10 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
   };
 
   this.onRunComplete = function() {
+	xml.att('total', xmlTestsTotal);
+	xml.att('failures', xmlTestsFailures);
+	xml.att('errors', xmlTestsErrors);
+	xml.att('not-run', xmlTestsNotRun);
     var xmlToOutput = xml;
 
     pendingFileWritings++;
@@ -85,7 +99,7 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
         if (err) {
           log.warn('Cannot write NUnit xml\n\t' + err.message);
         } else {
-          log.debug('NUnit results written to "%s".', outputFile);
+          log.debug('NUnit results written to "%s".', path.resolve(outputFile));
         }
 
         if (!--pendingFileWritings) {
@@ -109,9 +123,11 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
   });
 
 };
-NUnitReporter.$inject = ['baseReporterDecorator', 'config.junitReporter', 'emitter', 'logger',
+
+NUnitReporter.$inject = ['baseReporterDecorator', 'config', 'emitter', 'logger',
   'helper', 'formatError'
 ];
+
 module.exports = {
   'reporter:nunit': ['type', NUnitReporter]
 };
