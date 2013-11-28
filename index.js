@@ -46,7 +46,7 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
 
     suite.att('executed', 'True');
     suite.att('result', result.failed ==! 0 ? 'Failure' : 'Success');
-    suite.att('success', result.failed === 0 ? true : false);
+    suite.att('success', result.failed === 0 ? 'True' : 'False');
     suite.att('failures', result.failed);
     suite.att('time', (result.netTime || 0) / 1000);
 
