@@ -18,6 +18,8 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
   var xmlTestsFailures = 0;
   var xmlTestsErrors = 0;
   var xmlTestsNotRun = 0;
+  var xmlTestsDate = (new Date()).toISOString().substr(0, 10);
+  var xmlTestsTime = (new Date()).toISOString().substr(11, 8);
 
   baseReporterDecorator(this);
 
@@ -87,6 +89,8 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
   };
 
   this.onRunComplete = function() {
+	xml.att('date', xmlTestsDate);
+	xml.att('time', xmlTestsTime);
 	xml.att('total', xmlTestsTotal);
 	xml.att('failures', xmlTestsFailures);
 	xml.att('errors', xmlTestsErrors);
