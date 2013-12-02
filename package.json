@@ -10,13 +10,26 @@
     "karma-plugin",
     "karma-report"
   ],
-  "author": "Jernej Logar",
+  "author": {
+    "name": "Jernej Logar"
+  },
   "license": "MIT",
   "dependencies": {
     "xmlbuilder": "0.4.3"
   },
-  "repository" : {
-    "type" : "git"
-  , "url" : "git://github.com/jlogar/karma-nunit-reporter.git"
-  }
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jlogar/karma-nunit-reporter.git"
+  },
+  "readme": "karma-nunit-reporter\r\n====================\r\n\r\nKarma reporter for the NUnit XML format.\r\n",
+  "readmeFilename": "README.md",
+  "bugs": {
+    "url": "https://github.com/jlogar/karma-nunit-reporter/issues"
+  },
+  "_id": "karma-nunit-reporter@0.0.0",
+  "dist": {
+    "shasum": "e15ad703e4691b4ad95eda22abbeed3505bac0da"
+  },
+  "_from": "karma-nunit-reporter@",
+  "_resolved": "https://registry.npmjs.org/karma-nunit-reporter/-/karma-nunit-reporter-0.0.0.tgz"
 }
