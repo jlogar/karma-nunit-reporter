@@ -1,6 +1,6 @@
 {
   "name": "karma-nunit-reporter",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A Karma plugin. Report results in nunit xml format.",
   "main": "index.js",
   "scripts": {
