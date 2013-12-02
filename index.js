@@ -5,6 +5,7 @@ var builder = require('xmlbuilder');
 
 
 var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, helper, formatError) {
+  config.nunitReporter = config.nunitReporter || {};
   var outputFile = path.resolve(config.basePath, config.nunitReporter.outputFile);
   var suiteName = config.nunitReporter.suiteName || 'unit';
   var log = logger.create('reporter.nunit');
