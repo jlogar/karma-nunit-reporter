@@ -4,23 +4,22 @@ var fs = require('fs');
 var builder = require('xmlbuilder');
 
 
-var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, helper, formatError) {
-  config.nunitReporter = config.nunitReporter || {};
-  var outputFile = path.resolve(config.basePath, config.nunitReporter.outputFile);
-  var suiteName = config.nunitReporter.suiteName || 'unit';
+var NUnitReporter = function(baseReporterDecorator, config, logger, helper, formatError) {
   var log = logger.create('reporter.nunit');
-  
+  var reporterConfig = config.nunitReporter || {};
+  var pkgName = reporterConfig.suite || '';
+  var outputFile = helper.normalizeWinPath(path.resolve(config.basePath, reporterConfig.outputFile
+      || 'test-results.xml'));
+
   var xml;
-  var testBrowsers;
-  var allMessages = [];
+  var suites;
+  var results;
   var pendingFileWritings = 0;
-  var fileWritingFinished = function(){};
-  var xmlTestsTotal = 0;
-  var xmlTestsFailures = 0;
-  var xmlTestsErrors = 0;
-  var xmlTestsNotRun = 0;
-  var xmlTestsDate = (new Date()).toISOString().substr(0, 10);
-  var xmlTestsTime = (new Date()).toISOString().substr(11, 8);
+  var fileWritingFinished = function() {};
+  var allMessages = [];
+  var totalSuccess = 0;
+  var totalFailures = 0;
+  var totalSkipped = 0;
 
   baseReporterDecorator(this);
 
@@ -28,74 +27,94 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
     allMessages.push(msg);
   }];
 
-  this.onRunStart = function(browsers) {
-    testBrowsers = {};
-    xml = builder
-    .create('test-results', {'version': '1.0', 'encoding': 'UTF-8'})
-    .att('name', 'Javascript Specs');
+  var initliazeXmlForBrowser = function(browser) {
 
-    var testBrowser;
-    browsers.forEach(function(browser) {
-      testBrowser = testBrowsers[browser.id] = xml.ele('test-suite', {
-        name: browser.name, 'type': suiteName, /*timestamp: timestamp,*/ id: 0, hostname: os.hostname()
-      });
-      testBrowser.suites = [];
-      testBrowser.results = testBrowser.ele('results');
+    var suite = suites[browser.id] = xml.ele('test-suite', {
+      name: browser.name
     });
+    
+    results[browser.id] = suite.ele('results');
+
+    //suite.ele('properties').ele('property', {name: 'browser.fullName', value: browser.fullName});
   };
-  this.onBrowserComplete = function(browser) {
-    var suite = testBrowsers[browser.id];
+
+  this.onRunStart = function(browsers) {
+    suites = Object.create(null);
+    results = Object.create(null);
+    xml = builder.create('test-results');
+
+    xml.att('name', "Karma Results")
+
+    var d = new Date();
+    var date = d.toISOString().substr(0, 10);
+    var time = d.toISOString().substr(11, 8);
+    xml.att('date', date);
+    xml.att('time', time);
+
+    // required attr we don't have data for
+    xml.att('invalid', 0);
+    xml.att('ignored', 0);
+    xml.att('inconclusive', 0);
+    xml.att('not-run', 0);
+    xml.att('errors', 0);
+
+    xml.ele('environment', {
+        'nunit-version': 'na', 'clr-version': 'na', 'os-version': os.release(),
+        platform: os.platform(), cwd: config.basePath, user: 'na', 'user-domain': 'na',
+        'machine-name': os.hostname()
+    });
+
+    xml.ele('culture-info', { 'current-culture': 'na', 'current-uiculture': 'na' });
+
+    // TODO(vojta): remove once we don't care about Karma 0.10
+    browsers.forEach(initliazeXmlForBrowser);
+  };
+
+  this.onBrowserStart = function(browser) {
+      initliazeXmlForBrowser(browser);
+
+      
+  };
+
+  this.onBrowserComplete = function (browser) {
+      
+
+    var suite = suites[browser.id];
+
+
+    if (!suite) {
+      // This browser did not signal `onBrowserStart`. That happens
+      // if the browser timed out during the start phase.
+      return;
+    }
+
     var result = browser.lastResult;
 
-    suite.att('executed', 'True');
-    suite.att('result', result.failed ==! 0 ? 'Failure' : 'Success');
-    suite.att('success', result.failed === 0 ? 'True' : 'False');
-    suite.att('failures', result.failed);
-    suite.att('time', (result.netTime || 0) / 1000);
+    suite.att('type', 'TestFixture');
+    suite.att('executed', !result.skipped);
+    suite.att('result', (result.failed) ? 'Failure' : 'Success');
+    
+    //suite.att('total', result.total);
+    //suite.att('errors', result.disconnected || result.error ? 1 : 0);
+    //suite.att('failures', result.failed);
+    //suite.att('time', (result.netTime || 0) / 1000);
 
-    suite.ele('system-out').dat(allMessages.join() + '\n');
-    suite.ele('system-err');
-	
-	xmlTestsTotal += result.total;
-	xmlTestsFailures += result.failed;
-  };
+    //suite.ele('system-out').dat(allMessages.join() + '\n');
+      //suite.ele('system-err');
 
-  this.specSuccess = this.specSkipped = this.specFailure = function(browser, result) {
-  	var currentLevel = testBrowsers[browser.id];
-  	result.suite.forEach(function(suite) {
-  		var id = suite + 'id';
-  		if (currentLevel.suites[id]) {
-  			currentLevel = currentLevel.suites[id];
-  			return;
-  		}
-  		currentLevel.suites[id] = currentLevel.ele('test-suite', {name: suite});
-  		currentLevel = currentLevel.suites[id];
-  		currentLevel.suites = [];
-  		currentLevel.results = currentLevel.ele('results');
-  	});
-    var spec = currentLevel.results.ele('test-case', {
-      name: result.description,
-      time: ((result.time || 0) / 1000),
-      description: result.suite.join(' ').replace(/\./g, '_'),
-      executed: 'True',
-      result: result.skipped? 'Ignored': result.success? 'Success': 'Failure',
-	  success: result.success? 'True': 'False'
-    });
+    totalSuccess = totalSuccess + result.total;
+    xml.att('total', totalSuccess);
 
-    if (!result.success) {
-      result.log.forEach(function(err) {
-        spec.ele('failure').ele('message', formatError(err));
-      });
-    }
+    totalFailures = totalFailures + result.failed;
+    xml.att('failures', totalFailures);
+
+    xml.att('skipped', totalSkipped);
+
+  
+
   };
 
   this.onRunComplete = function() {
-	xml.att('date', xmlTestsDate);
-	xml.att('time', xmlTestsTime);
-	xml.att('total', xmlTestsTotal);
-	xml.att('failures', xmlTestsFailures);
-	xml.att('errors', xmlTestsErrors);
-	xml.att('not-run', xmlTestsNotRun);
     var xmlToOutput = xml;
 
     pendingFileWritings++;
@@ -104,7 +123,7 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
         if (err) {
           log.warn('Cannot write NUnit xml\n\t' + err.message);
         } else {
-          log.debug('NUnit results written to "%s".', path.resolve(outputFile));
+          log.debug('NUnit results written to "%s".', outputFile);
         }
 
         if (!--pendingFileWritings) {
@@ -113,26 +132,49 @@ var NUnitReporter = function(baseReporterDecorator, config, emitter, logger, hel
       });
     });
 
-    testBrowsers = xml = null;
+    suites = xml = null;
     allMessages.length = 0;
   };
 
-  // TODO(vojta): move to onExit
+  this.specSuccess = this.specSkipped = this.specFailure = function(browser, result) {
+    var spec = results[browser.id].ele('test-case', {
+      name: result.description, time: ((result.time || 0) / 1000),
+      description: (pkgName ? pkgName + ' ' : '') + browser.name + '.' + result.suite.join(' ').replace(/\./g, '_'),
+      executed: result.skipped ? 'False' : 'True',
+      success: result.success ? 'True' : 'False',
+      result: result.success ? 'Success' : 'Failure'
+    });
+
+    if (result.skipped) {
+        //spec.ele('skipped');
+        totalSkipped++;
+    }
+
+    if (!result.success) {
+    //  result.log.forEach(function(err) {
+    //    spec.ele('failure', {type: ''}, formatError(err));
+        //  });
+
+        var failure = spec.ele('failure')
+        failure.ele('message').dat(result.log);
+        failure.ele('stack-trace').dat(result.suite + ' ' + result.description);
+
+    }
+  };
+
   // wait for writing all the xml files, before exiting
-  emitter.on('exit', function(done) {
+  this.onExit = function(done) {
     if (pendingFileWritings) {
       fileWritingFinished = done;
     } else {
       done();
     }
-  });
-
+  };
 };
 
-NUnitReporter.$inject = ['baseReporterDecorator', 'config', 'emitter', 'logger',
-  'helper', 'formatError'
-];
+NUnitReporter.$inject = ['baseReporterDecorator', 'config', 'logger', 'helper', 'formatError'];
 
+// PUBLISH DI MODULE
 module.exports = {
   'reporter:nunit': ['type', NUnitReporter]
 };

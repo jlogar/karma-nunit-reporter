@@ -1,6 +1,6 @@
 {
   "name": "karma-nunit-reporter",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A Karma plugin. Report results in nunit xml format.",
   "main": "index.js",
   "scripts": {
@@ -8,24 +8,29 @@
   },
   "keywords": [
     "karma-plugin",
-    "karma-report"
+    "karma-report",
+	"nunit"
   ],
   "author": {
     "name": "Jernej Logar"
   },
   "license": "MIT",
   "dependencies": {
-    "xmlbuilder": "0.4.3"
+    "xmlbuilder": "0.4.2"
+  },
+  "peerDependencies": {
+    "karma": ">=0.9"
   },
   "repository": {
     "type": "git",
     "url": "git://github.com/jlogar/karma-nunit-reporter.git"
   },
-  "readme": "karma-nunit-reporter\r\n====================\r\n\r\nKarma reporter for the NUnit XML format.\r\n",
-  "readmeFilename": "README.md",
   "bugs": {
     "url": "https://github.com/jlogar/karma-nunit-reporter/issues"
   },
+  "contributors": [
+	"Martin McWhorter <martin@mcwhorter.org>"
+  ],
   "_id": "karma-nunit-reporter@0.0.0",
   "dist": {
     "shasum": "e15ad703e4691b4ad95eda22abbeed3505bac0da"
