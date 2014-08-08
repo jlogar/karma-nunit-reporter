@@ -1,6 +1,7 @@
 # karma-nunit-reporter
 
-> Reporter for the NUnit XML format. A direct port from karma-junit-reporter.
+Reporter for the NUnit XML format. A direct port from karma-junit-reporter.
+
 ## Installation
 
 The easiest way is to keep `karma-nunit-reporter` as a devDependency in your `package.json`.
