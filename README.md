@@ -1,3 +1,7 @@
+# NOT MAINTAINED ANYMORE
+
+You really should use https://github.com/martinmcwhorter/karma-nunit2-reporter
+
 # karma-nunit-reporter
 
 Reporter for the NUnit XML format. A direct port from karma-junit-reporter.
